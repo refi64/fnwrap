@@ -150,7 +150,16 @@ FNWRAP_PRAGMA_PUSH
 #define FNWRAP_FOREACH_N(mc, d, n) FNWRAP_CONCAT(FNWRAP_FOREACH_N_, n)(mc, d)
 
 
+#define FNWRAP_FAIL(msg) ::fnwrap::fail(__func__, msg)
+
+
 namespace fnwrap {
+    void fail[[noreturn]](const char* func, const char* msg) {
+        std::cerr << "fnwrap internal error:" << func << ": " << msg << '\n';
+        abort();
+    }
+
+
     struct null {};
 
     template <typename T>
@@ -232,30 +241,31 @@ namespace fnwrap {
 
     struct anything {
         template <typename T>
-        operator T() { return unsafe_declval<T>(); }
+        operator T() {
+            FNWRAP_FAIL("anything was cast!");
+            return unsafe_declval<T>();
+        }
     };
 
 
     namespace arg_stubs {
         static anything a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
     }
-
-
-    void fail[[noreturn]](const char* func, const char* msg) {
-        std::cerr << "fnwrap internal error:" << func << ": " << msg << '\n';
-        abort();
-    }
 }
 
 
-#define FNWRAP_FAIL(msg) ::fnwrap::fail(__func__, msg)
+#define FNWRAP_ARGS_ORIG 0
+#define FNWRAP_ARGS_WHICH 1
+#define FNWRAP_ARGS_WRAP 2
+#define FNWRAP_ARGS_BEFORE 3
+#define FNWRAP_ARGS_AFTER 4
 
 
-#define FNWRAP_DECLARE_ARGS_ORIG 0
-#define FNWRAP_DECLARE_ARGS_WHICH 1
-#define FNWRAP_DECLARE_ARGS_WRAP 2
-#define FNWRAP_DECLARE_ARGS_BEFORE 3
-#define FNWRAP_DECLARE_ARGS_AFTER 4
+#define FNWRAP_TY FNWRAP_CONCAT(__fnwrap_ty_, __LINE__)
+#define FNWRAP_TY_PTR FNWRAP_CONCAT(__fnwrap_ty_ptr_, __LINE__)
+#define FNWRAP_TY_RET FNWRAP_CONCAT(__fnwrap_ty_ret_, __LINE__)
+#define FNWRAP_DECLS FNWRAP_CONCAT(__fnwrap_decls_, __LINE__)
+#define FNWRAP_PROTO_STUBS FNWRAP_CONCAT(__fnwrap_proto_stubs_, __LINE__)
 
 
 #define FNWRAP_DECLARE_ARG(index, data) \
@@ -271,13 +281,6 @@ namespace fnwrap {
     FNWRAP_TAIL(FNWRAP_FOREACH_N(FNWRAP_FORWARD_ARG, data, nargs))
 
 
-#define FNWRAP_TY FNWRAP_CONCAT(__fnwrap_ty_, __LINE__)
-#define FNWRAP_TY_PTR FNWRAP_CONCAT(__fnwrap_ty_ptr_, __LINE__)
-#define FNWRAP_TY_RET FNWRAP_CONCAT(__fnwrap_ty_ret_, __LINE__)
-#define FNWRAP_DECLS FNWRAP_CONCAT(__fnwrap_decls_, __LINE__)
-#define FNWRAP_PROTO_STUBS FNWRAP_CONCAT(__fnwrap_proto_stubs_, __LINE__)
-
-
 #define FNWRAP_FULL_FUNCTION_NAME(which, orig) \
     FNWRAP_IF(FNWRAP_IS_EMPTY(which), orig, \
               static_cast<::fnwrap::func2funcptr< \
@@ -287,17 +290,17 @@ namespace fnwrap {
 
 #define FNWRAP_DECLARE(index, data, nargs) \
     template <typename = void> \
-    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs) { \
-        FNWRAP_FAIL("should not be here! [nargs: " #nargs "]"); \
+    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_ARGS_ORIG, data, nargs) { \
+        FNWRAP_FAIL("inside proto stub! [nargs: " #nargs "]"); \
         return ::fnwrap::unsafe_declval<FNWRAP_TY_RET>(); \
     } \
-    using ::FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_ORIG, data); \
-    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_WRAP, data, nargs) { \
-        FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_BEFORE, data); \
+    using ::FNWRAP_TUPLE_GET(FNWRAP_ARGS_ORIG, data); \
+    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_ARGS_WRAP, data, nargs) { \
+        FNWRAP_TUPLE_GET(FNWRAP_ARGS_BEFORE, data); \
         ::fnwrap::defer fnwrap_deferred_expr{[&]() { \
-            FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_AFTER, data); \
+            FNWRAP_TUPLE_GET(FNWRAP_ARGS_AFTER, data); \
         }}; \
-        return FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_ORIG, data) \
+        return FNWRAP_TUPLE_GET(FNWRAP_ARGS_ORIG, data) \
             (FNWRAP_FORWARD_ARGS(data, nargs)); \
     }
 
