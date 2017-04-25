@@ -1,11 +1,12 @@
 CXX=clang++
+override CXXFLAGS+=-std=c++11 -g
 
 .PHONY: all pp
 
 all : tst
 
 tst : tst.cpp fnwrap.hpp
-	$(CXX) -g -std=c++11 -o $@ $<
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
 pp :
-	$(CXX) -std=c++11 -E -o - tst.cpp
+	$(CXX) $(CXXFLAGS) -E -o - tst.cpp

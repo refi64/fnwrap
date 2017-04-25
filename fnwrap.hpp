@@ -39,19 +39,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifdef __clang__
 #define FNWRAP_PRAGMA_PUSH \
     _Pragma("clang diagnostic push") \
-    _Pragma("clang diagnostic ignored \"-Wreturn-type\"")
+    _Pragma("clang diagnostic ignored \"-Wreturn-type\"") \
+    _Pragma("clang diagnostic ignored \"-Wc++98-compat\"") \
+    _Pragma("clang diagnostic ignored \"-Wc++98-compat-pedantic\"") \
+    _Pragma("clang diagnostic ignored \"-Wmissing-prototypes\"") \
+    _Pragma("clang diagnostic ignored \"-Wunused-parameter\"") \
+    _Pragma("clang diagnostic ignored \"-Wgnu-zero-variadic-macro-arguments\"")
 #define FNWRAP_PRAGMA_POP _Pragma("clang diagnostic pop")
 
 #elif __GNUC__
 #define FNWRAP_PRAGMA_PUSH \
     _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-fpermissive\"")
+    _Pragma("GCC diagnostic ignored \"-Wunused-variable\"")
 #define FNWRAP_PRAGMA_POP _Pragma("GCC diagnostic pop")
 
 #else
 #define FNWRAP_PRAGMA_PUSH
 #define FNWRAP_PRAGMA_POP
 #endif
+
+
+FNWRAP_PRAGMA_PUSH
 
 
 #define FNWRAP_CONCAT2(a, b) a##b
@@ -116,6 +124,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define FNWRAP_FOREACH_N_9(mc, d) FNWRAP_FOREACH_N_8(mc, d) mc(8, d)
 #define FNWRAP_FOREACH_N_10(mc, d) FNWRAP_FOREACH_N_9(mc, d) mc(9, d)
 #define FNWRAP_FOREACH_N(mc, d, n) FNWRAP_CONCAT(FNWRAP_FOREACH_N_, n)(mc, d)
+
 
 
 namespace fnwrap {
@@ -205,11 +214,11 @@ namespace fnwrap {
 
 
     namespace arg_stubs {
-        anything a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
+        static anything a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
     }
 
 
-    void fail(const char* func, const char* msg) {
+    void fail[[noreturn]](const char* func, const char* msg) {
         std::cerr << "fnwrap internal error:" << func << ": " << msg << '\n';
         abort();
     }
@@ -265,19 +274,21 @@ namespace fnwrap {
 
 
 #define FNWRAP(orig, wrap, before, after) \
+    FNWRAP_PRAGMA_PUSH \
     using FNWRAP_TY = ::fnwrap::to_function<decltype(orig)>::type; \
     using FNWRAP_TY_PTR = ::fnwrap::func2funcptr<FNWRAP_TY>::type ; \
     using FNWRAP_TY_RET = ::fnwrap::get_return<FNWRAP_TY>::type; \
     namespace FNWRAP_DECLS { \
         namespace FNWRAP_PROTO_STUBS {} \
         using namespace FNWRAP_PROTO_STUBS; \
-        FNWRAP_PRAGMA_PUSH \
         using namespace ::fnwrap::arg_stubs; \
         FNWRAP_FOREACH(FNWRAP_DECLARE, (orig, wrap, before, after), \
                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9) \
-        FNWRAP_PRAGMA_POP \
     } \
     constexpr FNWRAP_TY_PTR wrap = \
-        static_cast<FNWRAP_TY_PTR>(FNWRAP_DECLS::wrap);
+        static_cast<FNWRAP_TY_PTR>(FNWRAP_DECLS::wrap); \
+    FNWRAP_PRAGMA_POP
+
+FNWRAP_PRAGMA_POP
 
 #endif
