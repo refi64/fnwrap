@@ -10,3 +10,6 @@ tst : tst.cpp fnwrap.hpp
 
 pp :
 	$(CXX) $(CXXFLAGS) -E -o - tst.cpp
+
+no-stdlib: no-stdlib.cpp fnwrap.hpp
+	$(CXX) $(CXXFLAGS) -fno-exceptions -nostdlib -o $@ $<

@@ -31,9 +31,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define FNWRAP_HPP
 
 
-#include <type_traits>
-#include <functional>
-#include <iostream>
+#ifndef FNWRAP_INTERNAL_ERROR_REPORTER
+#include <stdio.h>
+#define FNWRAP_INTERNAL_ERROR_REPORTER(func, msg) \
+    printf("fnwrap internal error:%s: %s\n", func, msg)
+#endif
+
+#ifndef FNWRAP_ABORT
+#include <stdlib.h>
+#define FNWRAP_ABORT abort
+#endif
 
 
 #ifdef __clang__
@@ -155,8 +162,8 @@ FNWRAP_PRAGMA_PUSH
 
 namespace fnwrap {
     void fail[[noreturn]](const char* func, const char* msg) {
-        std::cerr << "fnwrap internal error:" << func << ": " << msg << '\n';
-        abort();
+        FNWRAP_INTERNAL_ERROR_REPORTER(func, msg);
+        FNWRAP_ABORT();
     }
 
 
@@ -224,18 +231,18 @@ namespace fnwrap {
     struct func2funcptr<R(Args...)> : result<R(*)(Args...)> {};
 
 
+    template <typename T>
     class defer {
     public:
-        using Func = std::function<void()>;
-        defer(Func func_): func{func_} {}
+        defer(T func_): func{func_} {}
         ~defer() { func(); }
     private:
-        Func func;
+        T func;
     };
 
 
     template <typename T>
-    T unsafe_declval() { return *static_cast<volatile T*>(NULL); }
+    T unsafe_declval() { return *static_cast<volatile T*>(0); }
     template <> void unsafe_declval<void>() {}
 
 
@@ -266,6 +273,8 @@ namespace fnwrap {
 #define FNWRAP_TY_RET FNWRAP_CONCAT(__fnwrap_ty_ret_, __LINE__)
 #define FNWRAP_DECLS FNWRAP_CONCAT(__fnwrap_decls_, __LINE__)
 #define FNWRAP_PROTO_STUBS FNWRAP_CONCAT(__fnwrap_proto_stubs_, __LINE__)
+#define FNWRAP_DEFERRED_LAMBDA FNWRAP_CONCAT(__fnwrap_deferred_lambda, __LINE__)
+#define FNWRAP_DEFERRED_RAII FNWRAP_CONCAT(__fnwrap_deferred_raii, __LINE__)
 
 
 #define FNWRAP_DECLARE_ARG(index, data) \
@@ -297,9 +306,11 @@ namespace fnwrap {
     using ::FNWRAP_TUPLE_GET(FNWRAP_ARGS_ORIG, data); \
     FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_ARGS_WRAP, data, nargs) { \
         FNWRAP_TUPLE_GET(FNWRAP_ARGS_BEFORE, data); \
-        ::fnwrap::defer fnwrap_deferred_expr{[&]() { \
+        auto FNWRAP_DEFERRED_LAMBDA = [&]() { \
             FNWRAP_TUPLE_GET(FNWRAP_ARGS_AFTER, data); \
-        }}; \
+        }; \
+        ::fnwrap::defer<decltype(FNWRAP_DEFERRED_LAMBDA)> \
+            FNWRAP_DEFERRED_RAII{FNWRAP_DEFERRED_LAMBDA}; \
         return FNWRAP_TUPLE_GET(FNWRAP_ARGS_ORIG, data) \
             (FNWRAP_FORWARD_ARGS(data, nargs)); \
     }
