@@ -1,0 +1,2 @@
+#!/bin/sh
+curl -Lo catch.hpp https://github.com/philsquared/Catch/releases/download/v1.9.3/catch.hpp
