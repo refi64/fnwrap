@@ -118,11 +118,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define FNWRAP_FOREACH_N(mc, d, n) FNWRAP_CONCAT(FNWRAP_FOREACH_N_, n)(mc, d)
 
 
-#define FNWRAP_IF_1(t, f) t
-#define FNWRAP_IF_0(t, f) f
-#define FNWRAP_IF(v, t, f) FNWRAP_CONCAT(FNWRAP_IF_,v)(t, f)
-
-
 namespace fnwrap {
     struct null {};
 
@@ -235,10 +230,9 @@ namespace fnwrap {
 #define FNWRAP_FORWARD_ARG(index, data) , FNWRAP_CONCAT(a, index)
 
 
-#define FNWRAP_PROTO(which, data, nargs, do_add_ellipsis) \
+#define FNWRAP_PROTO(which, data, nargs) \
     FNWRAP_TUPLE_GET(which, data) \
-        (FNWRAP_TAIL(FNWRAP_FOREACH_N(FNWRAP_DECLARE_ARG, data, nargs)) \
-            FNWRAP_IF(do_add_ellipsis, ..., ))
+        (FNWRAP_TAIL(FNWRAP_FOREACH_N(FNWRAP_DECLARE_ARG, data, nargs)))
 
 #define FNWRAP_FORWARD_ARGS(data, nargs) \
     FNWRAP_TAIL(FNWRAP_FOREACH_N(FNWRAP_FORWARD_ARG, data, nargs))
@@ -253,12 +247,14 @@ namespace fnwrap {
 
 #define FNWRAP_DECLARE(index, data, nargs) \
     namespace FNWRAP_PROTO_STUBS { \
-        FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs, 1) { \
+        template <typename = void> \
+        FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs) { \
             FNWRAP_FAIL("should not be here! [nargs: " #nargs "]"); \
             return ::fnwrap::unsafe_declval<FNWRAP_TY_RET>(); \
         } \
     } \
-    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_WRAP, data, nargs, 0) { \
+    using ::FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_ORIG, data); \
+    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_WRAP, data, nargs) { \
         FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_BEFORE, data); \
         ::fnwrap::defer fnwrap_deferred_expr{[&]() { \
             FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_AFTER, data); \
