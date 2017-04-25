@@ -9,6 +9,10 @@ int f() { return 0; }
 int g(int x) { return x; }
 void h(int x, int y) {}
 
+int overload() { return 0; }
+int overload(int x) { return 1; }
+int overload(int x, int y) { return 2; }
+
 
 int global=-1;
 
@@ -16,17 +20,21 @@ void before(int n) { global = n; }
 void after(int n) { global += n; }
 
 
-FNWRAP(f, basic_f,,)
-FNWRAP(g, basic_g,,)
-FNWRAP(h, basic_h,,)
+FNWRAP(f,, basic_f,,)
+FNWRAP(g,, basic_g,,)
+FNWRAP(h,, basic_h,,)
 
-FNWRAP(f, before_f, before(2),)
-FNWRAP(g, before_g, before(a0),)
-FNWRAP(h, before_h, before(a1),)
+FNWRAP(f,, before_f, before(2),)
+FNWRAP(g,, before_g, before(a0),)
+FNWRAP(h,, before_h, before(a1),)
 
-FNWRAP(f, before_after_f, before(2), after(10))
-FNWRAP(g, before_after_g, before(a0), after(a0))
-FNWRAP(h, before_after_h, before(a1), after(a0))
+FNWRAP(f,, before_after_f, before(2), after(10))
+FNWRAP(g,, before_after_g, before(a0), after(a0))
+FNWRAP(h,, before_after_h, before(a1), after(a0))
+
+FNWRAP(overload, int(), overload_1,,)
+FNWRAP(overload, int(int), overload_2,,)
+FNWRAP(overload, (int(int, int)), overload_3,,) // Test parens, too!
 
 
 TEST_CASE("The basics work", "[basics]") {
@@ -57,4 +65,11 @@ TEST_CASE("after gets called", "[after]") {
 
     before_after_h(12, 36);
     CHECK(global == 48);
+}
+
+
+TEST_CASE("overloaded functions work", "[overload]") {
+    CHECK(overload_1() == 0);
+    CHECK(overload_2(1) == 1);
+    CHECK(overload_3(1, 2) == 2);
 }

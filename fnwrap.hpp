@@ -66,9 +66,33 @@ FNWRAP_PRAGMA_PUSH
 #define FNWRAP_CONCAT(a, b) FNWRAP_CONCAT2(a, b)
 
 
-#define FNWRAP_LEN_SEL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, ...) _10
+#define FNWRAP_SEL_10(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, ...) _10
+
 #define FNWRAP_LEN(...) \
-    FNWRAP_LEN_SEL(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+    FNWRAP_SEL_10(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+
+
+#define FNWRAP_IF_1(t, f) t
+#define FNWRAP_IF_0(t, f) f
+#define FNWRAP_IF(x, t, f) FNWRAP_CONCAT(FNWRAP_IF_, x)(t, f)
+
+#define FNWRAP_AND(a, b) FNWRAP_IF(a, FNWRAP_IF(b, 1, 0), 0)
+#define FNWRAP_NOT(x) FNWRAP_IF(x, 0, 1)
+
+
+#define FNWRAP_PAREN_TRIGGER(...) ,
+#define FNWRAP_HAS_COMMA(...) \
+    FNWRAP_SEL_10(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+#define FNWRAP_IS_TUPLE(x) FNWRAP_HAS_COMMA(FNWRAP_PAREN_TRIGGER x)
+
+#define FNWRAP_IS_EMPTY(x) \
+    FNWRAP_AND(FNWRAP_HAS_COMMA(FNWRAP_PAREN_TRIGGER x ()), \
+               FNWRAP_NOT(FNWRAP_IS_TUPLE(x)))
+
+
+#define FNWRAP_UNWRAP_PARENS2(...) __VA_ARGS__
+#define FNWRAP_UNWRAP_PARENS(x) FNWRAP_IF(FNWRAP_IS_TUPLE(x), \
+                                          FNWRAP_UNWRAP_PARENS2, ) x
 
 
 #define FNWRAP_FOREACH_1(mc, d, v) mc(0, d, v)
@@ -124,7 +148,6 @@ FNWRAP_PRAGMA_PUSH
 #define FNWRAP_FOREACH_N_9(mc, d) FNWRAP_FOREACH_N_8(mc, d) mc(8, d)
 #define FNWRAP_FOREACH_N_10(mc, d) FNWRAP_FOREACH_N_9(mc, d) mc(9, d)
 #define FNWRAP_FOREACH_N(mc, d, n) FNWRAP_CONCAT(FNWRAP_FOREACH_N_, n)(mc, d)
-
 
 
 namespace fnwrap {
@@ -229,9 +252,10 @@ namespace fnwrap {
 
 
 #define FNWRAP_DECLARE_ARGS_ORIG 0
-#define FNWRAP_DECLARE_ARGS_WRAP 1
-#define FNWRAP_DECLARE_ARGS_BEFORE 2
-#define FNWRAP_DECLARE_ARGS_AFTER 3
+#define FNWRAP_DECLARE_ARGS_WHICH 1
+#define FNWRAP_DECLARE_ARGS_WRAP 2
+#define FNWRAP_DECLARE_ARGS_BEFORE 3
+#define FNWRAP_DECLARE_ARGS_AFTER 4
 
 
 #define FNWRAP_DECLARE_ARG(index, data) \
@@ -254,6 +278,13 @@ namespace fnwrap {
 #define FNWRAP_PROTO_STUBS FNWRAP_CONCAT(__fnwrap_proto_stubs_, __LINE__)
 
 
+#define FNWRAP_FULL_FUNCTION_NAME(which, orig) \
+    FNWRAP_IF(FNWRAP_IS_EMPTY(which), orig, \
+              static_cast<::fnwrap::func2funcptr< \
+                                FNWRAP_UNWRAP_PARENS(which)>::type \
+                          >(orig))
+
+
 #define FNWRAP_DECLARE(index, data, nargs) \
     template <typename = void> \
     FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs) { \
@@ -271,14 +302,15 @@ namespace fnwrap {
     }
 
 
-#define FNWRAP(orig, wrap, before, after) \
+#define FNWRAP(orig, which, wrap, before, after) \
     FNWRAP_PRAGMA_PUSH \
-    using FNWRAP_TY = ::fnwrap::to_function<decltype(orig)>::type; \
+    using FNWRAP_TY = ::fnwrap::to_function<decltype( \
+        FNWRAP_FULL_FUNCTION_NAME(which, orig))>::type; \
     using FNWRAP_TY_PTR = ::fnwrap::func2funcptr<FNWRAP_TY>::type ; \
     using FNWRAP_TY_RET = ::fnwrap::get_return<FNWRAP_TY>::type; \
     namespace FNWRAP_DECLS { \
         using namespace ::fnwrap::arg_stubs; \
-        FNWRAP_FOREACH(FNWRAP_DECLARE, (orig, wrap, before, after), \
+        FNWRAP_FOREACH(FNWRAP_DECLARE, (orig, which, wrap, before, after), \
                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9) \
     } \
     constexpr FNWRAP_TY_PTR wrap = \
