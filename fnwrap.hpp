@@ -255,12 +255,10 @@ namespace fnwrap {
 
 
 #define FNWRAP_DECLARE(index, data, nargs) \
-    namespace FNWRAP_PROTO_STUBS { \
-        template <typename = void> \
-        FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs) { \
-            FNWRAP_FAIL("should not be here! [nargs: " #nargs "]"); \
-            return ::fnwrap::unsafe_declval<FNWRAP_TY_RET>(); \
-        } \
+    template <typename = void> \
+    FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_ORIG, data, nargs) { \
+        FNWRAP_FAIL("should not be here! [nargs: " #nargs "]"); \
+        return ::fnwrap::unsafe_declval<FNWRAP_TY_RET>(); \
     } \
     using ::FNWRAP_TUPLE_GET(FNWRAP_DECLARE_ARGS_ORIG, data); \
     FNWRAP_TY_RET FNWRAP_PROTO(FNWRAP_DECLARE_ARGS_WRAP, data, nargs) { \
@@ -279,8 +277,6 @@ namespace fnwrap {
     using FNWRAP_TY_PTR = ::fnwrap::func2funcptr<FNWRAP_TY>::type ; \
     using FNWRAP_TY_RET = ::fnwrap::get_return<FNWRAP_TY>::type; \
     namespace FNWRAP_DECLS { \
-        namespace FNWRAP_PROTO_STUBS {} \
-        using namespace FNWRAP_PROTO_STUBS; \
         using namespace ::fnwrap::arg_stubs; \
         FNWRAP_FOREACH(FNWRAP_DECLARE, (orig, wrap, before, after), \
                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9) \
